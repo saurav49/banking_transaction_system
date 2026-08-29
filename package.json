@@ -1,0 +1,47 @@
+{
+  "name": "banking-transaction-system",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun --watch src/server.ts",
+    "start": "bun src/server.ts",
+    "typecheck": "bunx tsc --noEmit",
+    "test": "bun test",
+    "test:integration": "bun test tests/integration",
+    "test:concurrency": "bun test tests/concurrency",
+    "prisma:format": "bunx --bun prisma format",
+    "prisma:validate": "bunx --bun prisma validate",
+    "prisma:generate": "bunx --bun prisma generate",
+    "prisma:migrate": "bunx --bun prisma migrate dev",
+    "prisma:studio": "bunx --bun prisma studio",
+    "seed": "bun prisma/seed.ts",
+    "worker:outbox": "bun src/workers/outbox-publisher/index.ts",
+    "worker:ledger": "bun src/workers/ledger/index.ts",
+    "worker:notification": "bun src/workers/notification/index.ts",
+    "worker:analytics": "bun src/workers/analytics/index.ts",
+    "worker:fraud": "bun src/workers/async-fraud/index.ts",
+    "worker:finalization": "bun src/workers/finalization/index.ts",
+    "topics:create": "bun scripts/create-topics.ts",
+    "dlq:reprocess": "bun scripts/reprocess-dlq.ts",
+    "replay": "bun scripts/replay-events.ts",
+    "simulate:attack": "bun scripts/attack-simulation.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^26.2.0",
+    "@types/pg": "^8.23.1",
+    "prisma": "^7.9.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.9.1",
+    "@prisma/client": "^7.9.1",
+    "dotenv": "^17.4.2",
+    "kafkajs": "^2.2.4",
+    "pg": "^8.23.0",
+    "zod": "^4.4.3"
+  }
+}
