@@ -17,6 +17,11 @@ enum UserStatus {
   INACTIVE
 }
 
+enum UserRole {
+  ADMIN
+  CUSTOMER
+}
+
 enum AccountStatus {
   ACTIVE
   INACTIVE
@@ -44,11 +49,13 @@ model User {
   name         String
   email        String     @unique
   passwordHash String
+  role         UserRole   @default(CUSTOMER)
   status       UserStatus @default(ACTIVE)
   createdAt    DateTime   @default(now()) @db.Timestamptz(6)
-  deletedAt    DateTime?
+  deletedAt    DateTime?  @db.Timestamptz(6)
 
-  accounts Account[]
+  accounts        Account[]
+  refreshSessions RefreshSession[]
 }
 
 model Account {
@@ -58,10 +65,25 @@ model Account {
   balance   BigInt        @default(0)
   status    AccountStatus @default(ACTIVE)
   createdAt DateTime      @default(now()) @db.Timestamptz(6)
-  deletedAt DateTime?
+  deletedAt DateTime?     @db.Timestamptz(6)
 
   transactions  Transaction[]
   ledgerEntries LedgerEntry[]
+
+  @@index([userId])
+}
+
+model RefreshSession {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  expiresAt DateTime  @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  revokedAt DateTime? @db.Timestamptz(6)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Transaction {
