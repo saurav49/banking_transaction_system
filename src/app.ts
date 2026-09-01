@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import express from 'express';
 import helmet from 'helmet';
+import cors from 'cors';
 import pinoHttp from 'pino-http';
 import { logger } from './infrastructure/logging/logger';
 import { router } from './routes/v1.routes';
@@ -11,6 +12,13 @@ const app = express();
 
 app.disable('x-powered-by');
 app.use(helmet());
+app.use(
+  cors({
+    origin: 'https://hoppscotch.io',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+  }),
+);
 app.use(
   pinoHttp({
     logger,
