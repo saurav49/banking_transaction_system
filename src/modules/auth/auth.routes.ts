@@ -10,7 +10,15 @@ const authRateLimit = rateLimit({
   limit: 10,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
-  message: { error: { code: 'RATE_LIMITED', message: 'Too many authentication attempts' } },
+  handler(request, response) {
+    response.status(429).json({
+      error: {
+        code: 'RATE_LIMITED',
+        message: 'Too many authentication attempts. Try again later.',
+        requestId: request.id,
+      },
+    });
+  },
 });
 
 export const authRouter = Router();

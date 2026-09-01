@@ -20,7 +20,10 @@ export class AccountService {
 
     const account = await this.repository.createForActiveUser(userId);
     if (!account) {
-      throw new NotFoundError('Active user not found');
+      throw new NotFoundError(
+        'The account owner does not exist or is inactive',
+        'ACCOUNT_OWNER_NOT_FOUND',
+      );
     }
 
     return {

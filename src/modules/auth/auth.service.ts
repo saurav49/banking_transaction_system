@@ -23,12 +23,9 @@ export class AuthService {
 
   async login(input: { email: string; password: string }): Promise<TokenPair> {
     const user = await this.repository.findUserByEmail(input.email);
-    if (!user?.passwordHash) {
-      throw new AuthenticationError();
-    }
     const passwordMatches = await Bun.password.verify(
       input.password,
-      user?.passwordHash!,
+      user?.passwordHash ?? DUMMY_PASSWORD_HASH,
     );
 
     if (
@@ -37,7 +34,10 @@ export class AuthService {
       user.status !== 'ACTIVE' ||
       user.deletedAt
     ) {
-      throw new AuthenticationError('Invalid email or password');
+      throw new AuthenticationError(
+        'Invalid email or password',
+        'INVALID_CREDENTIALS',
+      );
     }
 
     return this.issueTokenPair(user.id, user.role);
@@ -58,7 +58,10 @@ export class AuthService {
     });
 
     if (!user || user.status !== 'ACTIVE' || user.deletedAt) {
-      throw new AuthenticationError('Invalid or expired refresh token');
+      throw new AuthenticationError(
+        'Invalid or expired refresh token',
+        'INVALID_REFRESH_TOKEN',
+      );
     }
 
     return {

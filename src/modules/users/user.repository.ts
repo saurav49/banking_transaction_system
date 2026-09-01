@@ -31,7 +31,10 @@ export class PrismaUserRepository implements UserRepository {
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        throw new ConflictError('A user with this email already exists');
+        throw new ConflictError(
+          'A user with this email already exists',
+          'USER_EMAIL_ALREADY_EXISTS',
+        );
       }
       throw error;
     }

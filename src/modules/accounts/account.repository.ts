@@ -1,7 +1,10 @@
 import type { Account, PrismaClient } from '../../../generated/prisma/client';
 import { prisma } from '../../infrastructure/database/prisma';
 
-export type CreatedAccount = Pick<Account, 'id' | 'userId' | 'balance' | 'status' | 'createdAt'>;
+export type CreatedAccount = Pick<
+  Account,
+  'id' | 'userId' | 'balance' | 'status' | 'createdAt'
+>;
 
 export interface AccountRepository {
   createForActiveUser(userId: string): Promise<CreatedAccount | null>;
@@ -21,7 +24,7 @@ export class PrismaAccountRepository implements AccountRepository {
         return null;
       }
 
-      return tx.account.create({
+      const createdAccount = tx.account.create({
         data: { userId: user.id },
         select: {
           id: true,
@@ -31,6 +34,7 @@ export class PrismaAccountRepository implements AccountRepository {
           createdAt: true,
         },
       });
+      return createdAccount;
     });
   }
 }

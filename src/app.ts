@@ -22,6 +22,11 @@ app.use(
 app.use(
   pinoHttp({
     logger,
+    customLogLevel(_request, response, error) {
+      if (error || response.statusCode >= 500) return 'error';
+      if (response.statusCode >= 400) return 'warn';
+      return 'info';
+    },
     genReqId(request, response) {
       const incomingRequestId = request.headers['x-request-id'];
       const requestId =
@@ -38,7 +43,9 @@ app.use(express.json({ limit: '32kb' }));
 app.use('/api/v1', router);
 
 app.use((_request, _response, next) => {
-  next(new AppError(404, 'ROUTE_NOT_FOUND', 'Route not found'));
+  next(
+    new AppError(404, 'ROUTE_NOT_FOUND', 'The requested API endpoint was not found'),
+  );
 });
 
 app.use(errorHandler);

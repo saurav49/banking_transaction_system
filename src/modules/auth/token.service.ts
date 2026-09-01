@@ -1,5 +1,5 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { jwtVerify, SignJWT } from 'jose';
+import { errors as joseErrors, jwtVerify, SignJWT } from 'jose';
 import type { UserRole } from '../../../generated/prisma/enums';
 import { config } from '../../config/env';
 import { AuthenticationError } from '../../shared/errors/app-error';
@@ -43,7 +43,13 @@ export async function verifyAccessToken(token: string): Promise<AuthenticatedUse
     if (error instanceof AuthenticationError) {
       throw error;
     }
-    throw new AuthenticationError('Invalid or expired access token');
+    if (error instanceof joseErrors.JWTExpired) {
+      throw new AuthenticationError(
+        'Access token has expired',
+        'ACCESS_TOKEN_EXPIRED',
+      );
+    }
+    throw new AuthenticationError('Invalid access token', 'INVALID_ACCESS_TOKEN');
   }
 }
 

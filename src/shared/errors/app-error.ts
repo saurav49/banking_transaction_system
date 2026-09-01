@@ -11,8 +11,8 @@ export class AppError extends Error {
 }
 
 export class AuthenticationError extends AppError {
-  constructor(message = 'Authentication required') {
-    super(401, 'UNAUTHENTICATED', message);
+  constructor(message = 'Authentication required', code = 'UNAUTHENTICATED') {
+    super(401, code, message);
   }
 }
 
@@ -23,13 +23,19 @@ export class AuthorizationError extends AppError {
 }
 
 export class ConflictError extends AppError {
-  constructor(message: string) {
-    super(409, 'CONFLICT', message);
+  constructor(message: string, code = 'CONFLICT') {
+    super(409, code, message);
   }
 }
 
 export class NotFoundError extends AppError {
-  constructor(message: string) {
-    super(404, 'NOT_FOUND', message);
+  constructor(message: string, code = 'NOT_FOUND') {
+    super(404, code, message);
+  }
+}
+
+export class ServiceUnavailableError extends AppError {
+  constructor(message: string, code = 'SERVICE_UNAVAILABLE') {
+    super(503, code, message);
   }
 }

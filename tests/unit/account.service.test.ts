@@ -39,6 +39,9 @@ describe('AccountService', () => {
         { userId: 'admin-id', role: 'ADMIN' },
         '02fd9e70-e2d9-4c44-a65f-55a1a8952bdd',
       ),
-    ).rejects.toMatchObject({ statusCode: 404, code: 'NOT_FOUND' });
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      code: 'ACCOUNT_OWNER_NOT_FOUND',
+    });
   });
 });
