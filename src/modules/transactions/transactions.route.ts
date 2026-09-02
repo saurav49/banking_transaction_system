@@ -1,13 +1,25 @@
 import { Router } from 'express';
 import { PrismaTransactionRepository } from './transactions.repository';
 import { TransactionService } from './transactions.service';
+import { authenticate, requireRole } from '../auth/auth.middleware';
+import { createTransactionSchema } from './transactions.schemas';
 
 const transactionService = new TransactionService(
   new PrismaTransactionRepository(),
 );
 
-export const transactionRoute = Router();
+export const transactionRouter = Router();
 
-transactionRoute.post('/', async (request, response) => {
-  // await transactionService.create();
+transactionRouter.use(authenticate, requireRole('CUSTOMER'));
+
+transactionRouter.post('/', async (request, response) => {
+  const input = createTransactionSchema.parse(request.body);
+  const transaction = await transactionService.create(input);
+  if (transaction.success) {
+    response.status(201).json({ data: transaction });
+  } else {
+    response
+      .status(transaction.statusCode!)
+      .json({ message: transaction.message });
+  }
 });
