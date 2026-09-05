@@ -71,7 +71,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
         if (accountInfo.status === AccountStatus.INACTIVE) {
           return {
             success: false,
-            statusCode: 401,
+            statusCode: 409,
             message: 'Inactive account',
           };
         }
@@ -82,7 +82,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
         ) {
           return {
             success: false,
-            statusCode: 401,
+            statusCode: 403,
             message: 'Unauthorized access',
           };
         }
@@ -109,7 +109,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
           if (input.amountMinor >= accountInfo.balance) {
             return {
               success: false,
-              statusCode: 401,
+              statusCode: 422,
               message: 'Insufficient balance',
             };
           }
@@ -177,7 +177,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
           // EMIT FRAUD EVENT
           return {
             success: false,
-            statusCode: 403,
+            statusCode: 422,
             message: 'Invalid transaction',
           };
         }

@@ -15,8 +15,8 @@ const amountMinorSchema = z
 
 export const createTransactionSchema = z
   .object({
-    transactionId: z.string(),
-    accountId: z.string(),
+    transactionId: z.string().trim().min(1).max(100),
+    accountId: z.uuid(),
     type: transactionTypeSchema,
     amountMinor: amountMinorSchema,
   })
