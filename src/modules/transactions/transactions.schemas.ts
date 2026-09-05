@@ -8,11 +8,16 @@ export const transactionStatusSchema = z.enum([
   'FINALIZED',
 ]);
 
+const amountMinorSchema = z
+  .string()
+  .regex(/^[1-9]\d*$/)
+  .transform((value) => BigInt(value));
+
 export const createTransactionSchema = z.object({
   transactionId: z.string(),
   accountId: z.string(),
   type: transactionTypeSchema,
-  amountMinor: z.bigint(),
+  amountMinor: amountMinorSchema,
 });
 
 export const accountInfoSchema = z.object({

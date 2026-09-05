@@ -17,7 +17,7 @@ export interface TransactionRepository {
     auth: { userId: string; role: UserRole },
   ): Promise<{
     success: boolean;
-    statusCode: 201;
+    statusCode: number;
     data?: TransactionInfo;
     message?: string;
   }>;
@@ -38,42 +38,55 @@ export class PrismaTransactionRepository implements TransactionRepository {
     message?: string;
   }> {
     try {
-      const accountInfo = await this.db.account.findUnique({
-        where: {
-          id: input.accountId,
-        },
-      });
-      if (!accountInfo) {
-        return {
-          success: false,
-          statusCode: 404,
-          message: 'Account not found',
-        };
-      }
-      if (accountInfo.status === AccountStatus.INACTIVE) {
-        return {
-          success: false,
-          statusCode: 401,
-          message: 'Inactive account',
-        };
-      }
-      if (accountInfo.userId !== auth.userId) {
-        return {
-          success: false,
-          statusCode: 403,
-          message: 'Unauthorized transaction',
-        };
-      }
       return this.db.$transaction(async (tx) => {
-        const reqdTxn = await tx.transaction.findUnique({
+        const existingTnx = await tx.transaction.findUnique({
           where: {
             transactionId: input.transactionId,
           },
         });
-        if (reqdTxn) return reqdTxn;
+        if (existingTnx)
+          return {
+            success: true,
+            statusCode: 200,
+            data: existingTnx,
+          };
+        const accounts = await tx.$queryRaw<AccountInfo[]>`
+          SELECT
+          "id",
+          "status",
+          "userId",
+          "balance".
+          "createdAt",
+          "deletedAt"
+          FROM 'Account'
+          WHERE "id"=${input.accountId}
+          FOR UPDATE
+        `;
+        const accountInfo = accounts[0];
+        if (!accountInfo) {
+          return {
+            success: false,
+            statusCode: 404,
+            message: 'Account not found',
+          };
+        }
+        if (accountInfo.status === AccountStatus.INACTIVE) {
+          return {
+            success: false,
+            statusCode: 401,
+            message: 'Inactive account',
+          };
+        }
+        if (accountInfo.userId !== auth.userId) {
+          return {
+            success: false,
+            statusCode: 403,
+            message: 'Unauthorized transaction',
+          };
+        }
         // validate transaction type
         if (input.type === TransactionType.DEBIT) {
-          if (accountInfo && input.amountMinor >= accountInfo.balance) {
+          if (input.amountMinor >= accountInfo.balance) {
             return {
               success: false,
               statusCode: 401,
@@ -144,15 +157,17 @@ export class PrismaTransactionRepository implements TransactionRepository {
             balance: balanceAfter,
           },
         });
-        await tx.ledgerEntry.create({
-          data: {
-            transactionId: resultTxn.transactionId,
-            accountId: resultTxn.accountId,
-            type: resultTxn.type,
-            amount: resultTxn.amount,
-            balanceAfter: balanceAfter,
-          },
-        });
+        // emit success transaction event where
+        // we will do the ledger entry, email update etc
+        // await tx.ledgerEntry.create({
+        //   data: {
+        //     transactionId: resultTxn.transactionId,
+        //     accountId: resultTxn.accountId,
+        //     type: resultTxn.type,
+        //     amount: resultTxn.amount,
+        //     balanceAfter: balanceAfter,
+        //   },
+        // });
         return {
           success: true,
           statusCode: 201,

@@ -1,5 +1,8 @@
 import { Router } from 'express';
-import { PrismaTransactionRepository } from './transactions.repository';
+import {
+  PrismaTransactionRepository,
+  type TransactionRepository,
+} from './transactions.repository';
 import { TransactionService } from './transactions.service';
 import { authenticate, requireRole } from '../auth/auth.middleware';
 import { createTransactionSchema } from './transactions.schemas';

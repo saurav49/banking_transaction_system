@@ -1,4 +1,4 @@
-import { TransactionType, UserRole } from '../../../generated/prisma/enums';
+import { UserRole } from '../../../generated/prisma/enums';
 import type { TransactionRepository } from './transactions.repository';
 import type {
   CreateTransactionInput,
