@@ -45,3 +45,23 @@ export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
 export type TransactionType = z.infer<typeof transactionTypeSchema>;
 export type TransactionInfo = z.infer<typeof transactionInfoSchema>;
 export type AccountInfo = z.infer<typeof accountInfoSchema>;
+
+export type TransactionResponse = Omit<
+  TransactionInfo,
+  'amount' | 'createdAt'
+> & {
+  amount: string;
+  createdAt: string;
+};
+
+export type TransactionResult =
+  | {
+      success: true;
+      statusCode: 200 | 201;
+      data: TransactionResponse;
+    }
+  | {
+      success: false;
+      statusCode: number;
+      message: string;
+    };

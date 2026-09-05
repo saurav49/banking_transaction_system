@@ -10,18 +10,15 @@ import type {
   AccountInfo,
   CreateTransactionInput,
   TransactionInfo,
+  TransactionResponse,
+  TransactionResult,
 } from './transactions.schemas';
 
 export interface TransactionRepository {
   create(
     input: CreateTransactionInput,
     auth: { userId: string; role: UserRole },
-  ): Promise<{
-    success: boolean;
-    statusCode: number;
-    data?: TransactionInfo;
-    message?: string;
-  }>;
+  ): Promise<TransactionResult>;
   findAccountInfo(input: { accountId: string }): Promise<AccountInfo | null>;
   findTransaction(input: {
     txnId: string;
@@ -31,18 +28,23 @@ export interface TransactionRepository {
 
 const fraudTxn: bigint = 5000000n;
 
+function toTransactionResponse(
+  transaction: TransactionInfo,
+): TransactionResponse {
+  return {
+    ...transaction,
+    amount: transaction.amount.toString(),
+    createdAt: transaction.createdAt.toISOString(),
+  };
+}
+
 export class PrismaTransactionRepository implements TransactionRepository {
   constructor(private readonly db: PrismaClient = prisma) {}
 
   async create(
     input: CreateTransactionInput,
     auth: { userId: string; role: UserRole },
-  ): Promise<{
-    success: boolean;
-    statusCode: number;
-    data?: TransactionInfo;
-    message?: string;
-  }> {
+  ): Promise<TransactionResult> {
     try {
       return this.db.$transaction(async (tx) => {
         const existingTxn = await tx.transaction.findUnique({
@@ -57,15 +59,15 @@ export class PrismaTransactionRepository implements TransactionRepository {
             existingTxn.amount === input.amountMinor
           ) {
             return {
-              success: false,
-              statusCode: 209,
-              message: 'Transaction conflict',
+              success: true,
+              statusCode: 200,
+              data: toTransactionResponse(existingTxn),
             };
           } else {
             return {
-              success: true,
-              statusCode: 200,
-              data: existingTxn,
+              success: false,
+              statusCode: 409,
+              message: 'Transaction conflict',
             };
           }
         }
@@ -74,11 +76,12 @@ export class PrismaTransactionRepository implements TransactionRepository {
           "id",
           "status",
           "userId",
-          "balance".
+          "balance",
           "createdAt",
           "deletedAt"
-          FROM 'Account'
+          FROM "Account"
           WHERE "id"=${input.accountId}
+          and "deletedAt" is NULL
           FOR UPDATE
         `;
         const accountInfo = accounts[0];
@@ -96,11 +99,25 @@ export class PrismaTransactionRepository implements TransactionRepository {
             message: 'Inactive account',
           };
         }
-        if (accountInfo.userId !== auth.userId) {
+
+        if (
+          input.type === TransactionType.DEBIT &&
+          auth?.userId !== accountInfo?.userId
+        ) {
           return {
             success: false,
-            statusCode: 403,
-            message: 'Unauthorized transaction',
+            statusCode: 401,
+            message: 'Unauthorized access',
+          };
+        }
+        if (
+          input.type === TransactionType.CREDIT &&
+          auth.userId === accountInfo?.userId
+        ) {
+          return {
+            success: false,
+            statusCode: 400,
+            message: 'Cannot CREDIT own account',
           };
         }
         // validate transaction type
@@ -139,6 +156,9 @@ export class PrismaTransactionRepository implements TransactionRepository {
               userId: auth.userId,
             },
             type: TransactionType.DEBIT,
+            createdAt: {
+              gte: new Date(Date.now() - 60_000),
+            },
           },
         });
         const currentTotalTxnAmount = amt._sum.amount ?? 0n;
@@ -202,7 +222,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
         return {
           success: true,
           statusCode: 201,
-          data: resultTxn,
+          data: toTransactionResponse(resultTxn),
         };
       });
     } catch (e) {

@@ -2,7 +2,7 @@ import { UserRole } from '../../../generated/prisma/enums';
 import type { TransactionRepository } from './transactions.repository';
 import type {
   CreateTransactionInput,
-  TransactionInfo,
+  TransactionResult,
 } from './transactions.schemas';
 
 export class TransactionService {
@@ -11,13 +11,8 @@ export class TransactionService {
   async create(
     input: CreateTransactionInput,
     auth: { userId: string; role: UserRole },
-  ): Promise<{
-    success: boolean;
-    message?: string;
-    statusCode?: number;
-    data?: TransactionInfo;
-  }> {
-    return await this.repository.create(input, auth);
+  ): Promise<TransactionResult> {
+    return this.repository.create(input, auth);
   }
 
   async accountInfo(input: { accountId: string }) {
