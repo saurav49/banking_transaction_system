@@ -25,6 +25,8 @@ const envSchema = z.object({
     .int()
     .positive()
     .default(24 * 60 * 60),
+  MAX_TXN: z.number().int().default(5),
+  FRAUD_TXN_AMOUNT: z.number().int().default(5000000),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -14,6 +14,7 @@ import type {
   TransactionResponse,
   TransactionResult,
 } from './transactions.schemas';
+import { config } from '../../config/env';
 
 export interface TransactionRepository {
   create(
@@ -26,8 +27,6 @@ export interface TransactionRepository {
     accountId: string;
   }): Promise<TransactionInfo | null>;
 }
-
-const fraudTxn: bigint = 5000000n;
 
 function toTransactionResponse(
   transaction: TransactionInfo,
@@ -183,7 +182,10 @@ export class PrismaTransactionRepository implements TransactionRepository {
         if (input.type === TransactionType.DEBIT) {
           totalTxnAmount = currentTotalTxnAmount + input.amountMinor;
         }
-        if ((count && count._count.id + 1 > 5) || totalTxnAmount > fraudTxn) {
+        if (
+          (count && count._count.id + 1 > config.MAX_TXN) ||
+          totalTxnAmount > config.FRAUD_TXN_AMOUNT
+        ) {
           // EMIT FRAUD EVENT
           await tx.transaction.update({
             where: {
@@ -198,6 +200,8 @@ export class PrismaTransactionRepository implements TransactionRepository {
               event: 'TransactionBlocked',
               aggregateId: input.transactionId,
               payload: {
+                eventType: 'TransactionBlocked',
+                eventVersion: 1,
                 ipAddress,
                 deviceFingerprint,
                 reason: 'Exceed transaction limit or amount for a minute',
@@ -244,12 +248,22 @@ export class PrismaTransactionRepository implements TransactionRepository {
             balance: balanceAfter,
           },
         });
+        await tx.transaction.update({
+          where: {
+            transactionId: input.transactionId,
+          },
+          data: {
+            status: TransactionStatus.COMPLETED,
+          },
+        });
         // emit success transaction event
         await tx.outboxEvent.create({
           data: {
             event: 'TransactionCompleted',
             aggregateId: input.transactionId,
             payload: {
+              eventType: 'TransactionCompleted',
+              eventVersion: 1,
               transactionId: resultTxn.transactionId,
               accountId: resultTxn.accountId,
               type: resultTxn.type,
