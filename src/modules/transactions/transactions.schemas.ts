@@ -29,15 +29,17 @@ export const accountInfoSchema = z.object({
   deletedAt: z.date().nullable(),
 });
 
-export const transactionInfoSchema = z.object({
-  id: z.string(),
-  transactionId: z.string(),
-  accountId: z.string(),
-  type: transactionTypeSchema,
-  amount: z.bigint(),
-  status: transactionStatusSchema,
-  createdAt: z.date(),
-});
+export const transactionInfoSchema = z
+  .object({
+    id: z.string(),
+    transactionId: z.string().trim().min(1).max(100),
+    accountId: z.uuid(),
+    type: transactionTypeSchema,
+    amount: z.bigint(),
+    status: transactionStatusSchema,
+    createdAt: z.date(),
+  })
+  .strict();
 
 export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
 export type TransactionType = z.infer<typeof transactionTypeSchema>;

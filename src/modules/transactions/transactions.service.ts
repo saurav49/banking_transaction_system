@@ -17,12 +17,12 @@ export class TransactionService {
     statusCode?: number;
     data?: TransactionInfo;
   }> {
-    const transactionInfo = await this.repository.findTransaction({
-      txnId: input.transactionId,
-    });
-    if (transactionInfo) {
-      return { success: true, data: transactionInfo };
-    }
     return await this.repository.create(input, auth);
+  }
+
+  async accountInfo(input: { accountId: string }) {
+    return await this.repository.findAccountInfo({
+      accountId: input.accountId,
+    });
   }
 }

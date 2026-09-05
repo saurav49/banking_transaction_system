@@ -1,5 +1,6 @@
 import {
   AccountStatus,
+  TransactionStatus,
   TransactionType,
   UserRole,
   type PrismaClient,
@@ -22,8 +23,13 @@ export interface TransactionRepository {
     message?: string;
   }>;
   findAccountInfo(input: { accountId: string }): Promise<AccountInfo | null>;
-  findTransaction(input: { txnId: string }): Promise<TransactionInfo | null>;
+  findTransaction(input: {
+    txnId: string;
+    accountId: string;
+  }): Promise<TransactionInfo | null>;
 }
+
+const fraudTxn: bigint = 5000000n;
 
 export class PrismaTransactionRepository implements TransactionRepository {
   constructor(private readonly db: PrismaClient = prisma) {}
@@ -39,17 +45,30 @@ export class PrismaTransactionRepository implements TransactionRepository {
   }> {
     try {
       return this.db.$transaction(async (tx) => {
-        const existingTnx = await tx.transaction.findUnique({
+        const existingTxn = await tx.transaction.findUnique({
           where: {
             transactionId: input.transactionId,
+            accountId: input.accountId,
           },
         });
-        if (existingTnx)
-          return {
-            success: true,
-            statusCode: 200,
-            data: existingTnx,
-          };
+        if (existingTxn) {
+          if (
+            existingTxn.type === input.type &&
+            existingTxn.amount === input.amountMinor
+          ) {
+            return {
+              success: false,
+              statusCode: 209,
+              message: 'Transaction conflict',
+            };
+          } else {
+            return {
+              success: true,
+              statusCode: 200,
+              data: existingTxn,
+            };
+          }
+        }
         const accounts = await tx.$queryRaw<AccountInfo[]>`
           SELECT
           "id",
@@ -86,6 +105,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
         }
         // validate transaction type
         if (input.type === TransactionType.DEBIT) {
+          // the business requirement is to not make an account balance to be fully zero
           if (input.amountMinor >= accountInfo.balance) {
             return {
               success: false,
@@ -95,28 +115,38 @@ export class PrismaTransactionRepository implements TransactionRepository {
           }
         }
         // fraud detection
-        const result = await tx.transaction.aggregate({
+        const count = await tx.transaction.aggregate({
           _count: {
             id: true,
-          },
-          _sum: {
-            amount: true,
           },
           where: {
             account: {
               userId: auth.userId,
+              id: input.accountId,
             },
             createdAt: {
               gte: new Date(Date.now() - 60_000),
             },
           },
         });
-        const currentTotalTxnAmount = result._sum.amount ?? 0n;
-        let totalTxnAmount = 0n;
+        const amt = await tx.transaction.aggregate({
+          _sum: {
+            amount: true,
+          },
+          where: {
+            account: {
+              id: input.accountId,
+              userId: auth.userId,
+            },
+            type: TransactionType.DEBIT,
+          },
+        });
+        const currentTotalTxnAmount = amt._sum.amount ?? 0n;
+        let totalTxnAmount = currentTotalTxnAmount;
         if (input.type === TransactionType.DEBIT) {
           totalTxnAmount = currentTotalTxnAmount + input.amountMinor;
         }
-        if (result && result._count.id + 1 > 5 && totalTxnAmount > 50000) {
+        if ((count && count._count.id + 1 > 5) || totalTxnAmount > fraudTxn) {
           // EMIT FRAUD EVENT
           return {
             success: false,
@@ -131,6 +161,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
             accountId: input.accountId,
             type: input.type,
             amount: input.amountMinor,
+            status: TransactionStatus.COMPLETED,
           },
           select: {
             id: true,
@@ -186,6 +217,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
       return await this.db.account.findUnique({
         where: {
           id: input.accountId,
+          deletedAt: null,
         },
       });
     } catch (e) {
@@ -195,11 +227,13 @@ export class PrismaTransactionRepository implements TransactionRepository {
 
   async findTransaction(input: {
     txnId: string;
+    accountId: string;
   }): Promise<TransactionInfo | null> {
     try {
       return await this.db.transaction.findUnique({
         where: {
           transactionId: input.txnId,
+          accountId: input.accountId,
         },
       });
     } catch (e) {
