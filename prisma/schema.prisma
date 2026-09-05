@@ -44,6 +44,11 @@ enum LedgerType {
   CREDIT
 }
 
+enum OutboxEventStatus {
+  PENDING
+  COMPLETED
+}
+
 model User {
   id           String     @id @default(uuid())
   name         String
@@ -109,4 +114,16 @@ model LedgerEntry {
   amount        BigInt
   balanceAfter  BigInt
   createdAt     DateTime    @default(now()) @db.Timestamptz(6)
+}
+
+model OutboxEvent {
+  id          String            @id @default(uuid())
+  event       String
+  aggregateId String
+  payload     Json
+  status      OutboxEventStatus @default(PENDING)
+  attempts    Int               @default(0)
+  createdAt   DateTime          @default(now()) @db.Timestamptz(6)
+
+  @@index([status, id])
 }

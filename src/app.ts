@@ -11,6 +11,7 @@ import { errorHandler } from './shared/middleware/error-handler';
 const app = express();
 
 app.disable('x-powered-by');
+app.set('trust proxy', true);
 app.use(helmet());
 app.use(
   cors({
@@ -44,7 +45,11 @@ app.use('/api/v1', router);
 
 app.use((_request, _response, next) => {
   next(
-    new AppError(404, 'ROUTE_NOT_FOUND', 'The requested API endpoint was not found'),
+    new AppError(
+      404,
+      'ROUTE_NOT_FOUND',
+      'The requested API endpoint was not found',
+    ),
   );
 });
 

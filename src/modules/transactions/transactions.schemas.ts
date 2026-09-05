@@ -19,6 +19,7 @@ export const createTransactionSchema = z
     accountId: z.uuid(),
     type: transactionTypeSchema,
     amountMinor: amountMinorSchema,
+    deviceFingerprint: z.string(),
   })
   .strict();
 

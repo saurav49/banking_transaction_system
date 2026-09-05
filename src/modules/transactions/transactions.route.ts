@@ -14,7 +14,7 @@ transactionRouter.use(authenticate, requireRole('CUSTOMER', 'ADMIN'));
 
 transactionRouter.post('/', async (request, response) => {
   const input = createTransactionSchema.parse(request.body);
-  const transaction = await transactionService.create(input, request.auth!);
+  const transaction = await transactionService.create(input, request);
   if (transaction.success) {
     response.status(transaction.statusCode).json({ data: transaction.data });
   } else {

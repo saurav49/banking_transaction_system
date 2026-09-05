@@ -1,3 +1,4 @@
+import type { Request } from 'express';
 import {
   AccountStatus,
   TransactionStatus,
@@ -17,7 +18,7 @@ import type {
 export interface TransactionRepository {
   create(
     input: CreateTransactionInput,
-    auth: { userId: string; role: UserRole },
+    request: Request,
   ): Promise<TransactionResult>;
   findAccountInfo(input: { accountId: string }): Promise<AccountInfo | null>;
   findTransaction(input: {
@@ -43,10 +44,19 @@ export class PrismaTransactionRepository implements TransactionRepository {
 
   async create(
     input: CreateTransactionInput,
-    auth: { userId: string; role: UserRole },
+    request: Request,
   ): Promise<TransactionResult> {
     try {
       return this.db.$transaction(async (tx) => {
+        const ipAddress =
+          request.ip ||
+          request.headers['x-forwarded-for']
+            ?.toString()
+            .split(',')[0]
+            ?.trim() ||
+          null;
+        const deviceFingerprint = input.deviceFingerprint;
+        const auth = request.auth!;
         const accounts = await tx.$queryRaw<AccountInfo[]>`
           SELECT
           "id",
@@ -175,6 +185,25 @@ export class PrismaTransactionRepository implements TransactionRepository {
         }
         if ((count && count._count.id + 1 > 5) || totalTxnAmount > fraudTxn) {
           // EMIT FRAUD EVENT
+          await tx.transaction.update({
+            where: {
+              transactionId: input.transactionId,
+            },
+            data: {
+              status: TransactionStatus.BLOCKED,
+            },
+          });
+          await tx.outboxEvent.create({
+            data: {
+              event: 'TransactionBlocked',
+              aggregateId: input.transactionId,
+              payload: {
+                ipAddress,
+                deviceFingerprint,
+                reason: 'Exceed transaction limit or amount for a minute',
+              },
+            },
+          });
           return {
             success: false,
             statusCode: 422,

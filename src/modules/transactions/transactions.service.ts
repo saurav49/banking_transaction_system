@@ -1,4 +1,4 @@
-import { UserRole } from '../../../generated/prisma/enums';
+import type { Request } from 'express';
 import type { TransactionRepository } from './transactions.repository';
 import type {
   CreateTransactionInput,
@@ -10,9 +10,9 @@ export class TransactionService {
 
   async create(
     input: CreateTransactionInput,
-    auth: { userId: string; role: UserRole },
+    request: Request,
   ): Promise<TransactionResult> {
-    return this.repository.create(input, auth);
+    return this.repository.create(input, request);
   }
 
   async accountInfo(input: { accountId: string }) {
