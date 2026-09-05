@@ -182,6 +182,24 @@ export class PrismaTransactionRepository implements TransactionRepository {
         if (input.type === TransactionType.DEBIT) {
           totalTxnAmount = currentTotalTxnAmount + input.amountMinor;
         }
+        const resultTxn = await tx.transaction.create({
+          data: {
+            transactionId: input.transactionId,
+            accountId: input.accountId,
+            type: input.type,
+            amount: input.amountMinor,
+            status: TransactionStatus.COMPLETED,
+          },
+          select: {
+            id: true,
+            transactionId: true,
+            accountId: true,
+            type: true,
+            amount: true,
+            status: true,
+            createdAt: true,
+          },
+        });
         if (
           (count && count._count.id + 1 > config.MAX_TXN) ||
           totalTxnAmount > config.FRAUD_TXN_AMOUNT
@@ -215,25 +233,6 @@ export class PrismaTransactionRepository implements TransactionRepository {
           };
         }
 
-        const resultTxn = await tx.transaction.create({
-          data: {
-            transactionId: input.transactionId,
-            accountId: input.accountId,
-            type: input.type,
-            amount: input.amountMinor,
-            status: TransactionStatus.COMPLETED,
-          },
-          select: {
-            id: true,
-            transactionId: true,
-            accountId: true,
-            type: true,
-            amount: true,
-            status: true,
-            createdAt: true,
-          },
-        });
-
         let balanceAfter = 0n;
         if (input.type === TransactionType.DEBIT) {
           balanceAfter = accountInfo.balance - resultTxn.amount;
@@ -246,14 +245,6 @@ export class PrismaTransactionRepository implements TransactionRepository {
           },
           data: {
             balance: balanceAfter,
-          },
-        });
-        await tx.transaction.update({
-          where: {
-            transactionId: input.transactionId,
-          },
-          data: {
-            status: TransactionStatus.COMPLETED,
           },
         });
         // emit success transaction event
