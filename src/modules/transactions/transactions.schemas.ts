@@ -13,21 +13,25 @@ const amountMinorSchema = z
   .regex(/^[1-9]\d*$/)
   .transform((value) => BigInt(value));
 
-export const createTransactionSchema = z.object({
-  transactionId: z.string(),
-  accountId: z.string(),
-  type: transactionTypeSchema,
-  amountMinor: amountMinorSchema,
-});
+export const createTransactionSchema = z
+  .object({
+    transactionId: z.string(),
+    accountId: z.string(),
+    type: transactionTypeSchema,
+    amountMinor: amountMinorSchema,
+  })
+  .strict();
 
-export const accountInfoSchema = z.object({
-  id: z.string(),
-  userId: z.string(),
-  balance: z.bigint(),
-  status: z.string(),
-  createdAt: z.date(),
-  deletedAt: z.date().nullable(),
-});
+export const accountInfoSchema = z
+  .object({
+    id: z.string(),
+    userId: z.string(),
+    balance: z.bigint(),
+    status: z.string(),
+    createdAt: z.date(),
+    deletedAt: z.date().nullable(),
+  })
+  .strict();
 
 export const transactionInfoSchema = z
   .object({

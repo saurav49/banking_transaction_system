@@ -47,30 +47,6 @@ export class PrismaTransactionRepository implements TransactionRepository {
   ): Promise<TransactionResult> {
     try {
       return this.db.$transaction(async (tx) => {
-        const existingTxn = await tx.transaction.findUnique({
-          where: {
-            transactionId: input.transactionId,
-            accountId: input.accountId,
-          },
-        });
-        if (existingTxn) {
-          if (
-            existingTxn.type === input.type &&
-            existingTxn.amount === input.amountMinor
-          ) {
-            return {
-              success: true,
-              statusCode: 200,
-              data: toTransactionResponse(existingTxn),
-            };
-          } else {
-            return {
-              success: false,
-              statusCode: 409,
-              message: 'Transaction conflict',
-            };
-          }
-        }
         const accounts = await tx.$queryRaw<AccountInfo[]>`
           SELECT
           "id",
@@ -112,12 +88,19 @@ export class PrismaTransactionRepository implements TransactionRepository {
         }
         if (
           input.type === TransactionType.CREDIT &&
-          auth.userId === accountInfo?.userId
+          auth.role !== UserRole.ADMIN
         ) {
+          if (auth.userId === accountInfo.userId) {
+            return {
+              success: false,
+              statusCode: 403,
+              message: 'Cannot credit own account',
+            };
+          }
           return {
             success: false,
-            statusCode: 400,
-            message: 'Cannot CREDIT own account',
+            statusCode: 403,
+            message: 'Only authorized admin can credit account',
           };
         }
         // validate transaction type
@@ -128,6 +111,30 @@ export class PrismaTransactionRepository implements TransactionRepository {
               success: false,
               statusCode: 401,
               message: 'Insufficient balance',
+            };
+          }
+        }
+        const existingTxn = await tx.transaction.findUnique({
+          where: {
+            transactionId: input.transactionId,
+            accountId: input.accountId,
+          },
+        });
+        if (existingTxn) {
+          if (
+            existingTxn.type === input.type &&
+            existingTxn.amount === input.amountMinor
+          ) {
+            return {
+              success: true,
+              statusCode: 200,
+              data: toTransactionResponse(existingTxn),
+            };
+          } else {
+            return {
+              success: false,
+              statusCode: 409,
+              message: 'Transaction conflict',
             };
           }
         }
