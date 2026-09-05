@@ -244,7 +244,20 @@ export class PrismaTransactionRepository implements TransactionRepository {
             balance: balanceAfter,
           },
         });
-        // emit success transaction event where
+        // emit success transaction event
+        await tx.outboxEvent.create({
+          data: {
+            event: 'TransactionCompleted',
+            aggregateId: input.transactionId,
+            payload: {
+              transactionId: resultTxn.transactionId,
+              accountId: resultTxn.accountId,
+              type: resultTxn.type,
+              amount: resultTxn.amount.toString(),
+              balanceAfter: balanceAfter.toString(),
+            },
+          },
+        });
         // we will do the ledger entry, email update etc
         // await tx.ledgerEntry.create({
         //   data: {
