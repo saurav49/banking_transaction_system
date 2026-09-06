@@ -1,8 +1,9 @@
 import { Kafka, logLevel } from 'kafkajs';
+import { config } from '../../config/env';
 
 export const kafka = new Kafka({
-  clientId: process.env.KAFKA_CLIENT_ID,
-  brokers: process.env.KAFKA_BROKERS!.split(','),
+  clientId: config.KAFKA_CLIENT_ID,
+  brokers: config.KAFKA_BROKERS.split(',').map((broker) => broker.trim()),
   logLevel: logLevel.INFO,
   retry: {
     initialRetryTime: 300,
