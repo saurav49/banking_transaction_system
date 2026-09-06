@@ -46,7 +46,8 @@ enum LedgerType {
 
 enum OutboxEventStatus {
   PENDING
-  COMPLETED
+  PROCESSING
+  PUBLISHED
 }
 
 model User {
@@ -117,13 +118,28 @@ model LedgerEntry {
 }
 
 model OutboxEvent {
-  id          String            @id @default(uuid())
-  event       String
-  aggregateId String
-  payload     Json
-  status      OutboxEventStatus @default(PENDING)
-  attempts    Int               @default(0)
-  createdAt   DateTime          @default(now()) @db.Timestamptz(6)
+  id            String            @id @default(uuid())
+  topic         String
+  partitionKey  String
+  eventType     String
+  eventVersion  Int
+  aggregateId   String
+  transactionId String
+  payload       Json
+  status        OutboxEventStatus @default(PENDING)
+  attempts      Int               @default(0)
+  nextAttemptAt DateTime          @default(now()) @db.Timestamptz(6)
+  createdAt     DateTime          @default(now()) @db.Timestamptz(6)
+  publishedAt   DateTime?
+  lastError     String?
 
-  @@index([status, id])
+  @@index([transactionId])
+  @@index([status, nextAttemptAt, createdAt])
+}
+
+model ProcessedEvent {
+  id           String   @id() @default(uuid())
+  eventId      String
+  consumerName String
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
 }

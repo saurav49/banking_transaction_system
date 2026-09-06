@@ -215,11 +215,14 @@ export class PrismaTransactionRepository implements TransactionRepository {
           });
           await tx.outboxEvent.create({
             data: {
-              event: 'TransactionBlocked',
+              eventType: 'TransactionBlocked',
               aggregateId: input.transactionId,
+              transactionId: input.transactionId,
+              topic: 'banking.transaction-events.v1',
+              partitionKey: input.accountId,
+              eventVersion: 1,
               payload: {
-                eventType: 'TransactionBlocked',
-                eventVersion: 1,
+                type: 'TransactionBlocked',
                 ipAddress,
                 deviceFingerprint,
                 reason: 'Exceed transaction limit or amount for a minute',
@@ -250,14 +253,17 @@ export class PrismaTransactionRepository implements TransactionRepository {
         // emit success transaction event
         await tx.outboxEvent.create({
           data: {
-            event: 'TransactionCompleted',
+            eventType: 'TransactionCompleted',
             aggregateId: input.transactionId,
+            topic: 'banking.transaction-events.v1',
+            partitionKey: input.accountId,
+            eventVersion: 1,
+            transactionId: input.transactionId,
             payload: {
-              eventType: 'TransactionCompleted',
-              eventVersion: 1,
+              type: 'TransactionCompleted',
               transactionId: resultTxn.transactionId,
               accountId: resultTxn.accountId,
-              type: resultTxn.type,
+              txnType: resultTxn.type,
               amount: resultTxn.amount.toString(),
               balanceAfter: balanceAfter.toString(),
             },
