@@ -1,5 +1,5 @@
 import { kafka } from '../src/infrastructure/kafka/kafka';
-
+import { TOPICS } from '../src/shared/constants';
 const admin = kafka.admin();
 
 try {
@@ -9,7 +9,12 @@ try {
     waitForLeaders: true,
     topics: [
       {
-        topic: 'banking.transaction-events.v1',
+        topic: TOPICS['banking_transaction'],
+        numPartitions: 3,
+        replicationFactor: 1,
+      },
+      {
+        topic: TOPICS['banking_transaction_dlq'],
         numPartitions: 3,
         replicationFactor: 1,
       },

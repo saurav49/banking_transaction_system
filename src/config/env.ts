@@ -29,6 +29,12 @@ const envSchema = z.object({
   FRAUD_TXN_AMOUNT: z.coerce.number().int().positive().default(5_000_000),
   KAFKA_BROKERS: z.string().min(1),
   KAFKA_CLIENT_ID: z.string().min(1),
+  CONSUMER_MAX_RETRIES: z.coerce.number().int().nonnegative().default(5),
+  CONSUMER_RETRY_BASE_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(1_000),
 });
 
 const parsed = envSchema.safeParse(process.env);

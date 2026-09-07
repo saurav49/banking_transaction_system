@@ -138,8 +138,9 @@ model OutboxEvent {
 }
 
 model ProcessedEvent {
-  id           String   @id() @default(uuid())
   eventId      String
   consumerName String
-  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+  processedAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  @@id([consumerName, eventId])
 }

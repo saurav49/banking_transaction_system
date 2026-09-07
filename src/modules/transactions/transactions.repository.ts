@@ -15,6 +15,7 @@ import type {
   TransactionResult,
 } from './transactions.schemas';
 import { config } from '../../config/env';
+import { TOPICS } from '../../shared/constants';
 
 export interface TransactionRepository {
   create(
@@ -232,7 +233,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
             eventType: 'TransactionBlocked',
             aggregateId: input.transactionId,
             transactionId: input.transactionId,
-            topic: 'banking.transaction-events.v1',
+            topic: TOPICS['banking_transaction'],
             partitionKey: input.accountId,
             eventVersion: 1,
             payload: {
@@ -278,7 +279,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
         data: {
           eventType: 'TransactionCompleted',
           aggregateId: input.transactionId,
-          topic: 'banking.transaction-events.v1',
+          topic: TOPICS['banking_transaction'],
           partitionKey: input.accountId,
           eventVersion: 1,
           transactionId: input.transactionId,
@@ -292,16 +293,6 @@ export class PrismaTransactionRepository implements TransactionRepository {
           },
         },
       });
-      // we will do the ledger entry, email update etc
-      // await tx.ledgerEntry.create({
-      //   data: {
-      //     transactionId: resultTxn.transactionId,
-      //     accountId: resultTxn.accountId,
-      //     type: resultTxn.type,
-      //     amount: resultTxn.amount,
-      //     balanceAfter: balanceAfter,
-      //   },
-      // });
       return {
         success: true,
         statusCode: 201,

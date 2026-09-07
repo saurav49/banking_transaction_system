@@ -37,11 +37,41 @@ export const outboxEventInfoSchema = z
   })
   .strict();
 
+export const transactionCompletedPayloadSchema = z
+  .object({
+    type: z.literal('TransactionCompleted'),
+    transactionId: z.string().trim().min(1).max(100),
+    accountId: z.uuid(),
+    txnType: z.enum(['DEBIT', 'CREDIT']),
+    amount: z.string().regex(/^[1-9]\d*$/),
+    balanceAfter: z.string().regex(/^\d+$/),
+  })
+  .strict();
+
+export const transactionEventSchema = z
+  .object({
+    eventId: z.uuid(),
+    eventType: z.string().trim().min(1),
+    eventVersion: z.number().int().positive(),
+    aggregateId: z.string().trim().min(1),
+    transactionId: z.string().trim().min(1).max(100),
+    occurredAt: z.iso.datetime(),
+    payload: z.json(),
+  })
+  .strict();
+
+export const transactionCompletedEventSchema = transactionEventSchema.extend({
+  eventType: z.literal('TransactionCompleted'),
+  payload: transactionCompletedPayloadSchema,
+});
+
 export type CreateOutboxEventInput = z.infer<typeof createOutboxEventSchema>;
 
 export type OutboxEventStatus = z.infer<typeof outboxEventStatusSchema>;
 
 export type OutboxEventInfo = z.infer<typeof outboxEventInfoSchema>;
+
+export type TransactionEvent = z.infer<typeof transactionEventSchema>;
 
 export type OutboxEventResponse = Omit<
   OutboxEventInfo,
