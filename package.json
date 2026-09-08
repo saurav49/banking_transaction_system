@@ -13,6 +13,7 @@
     "prisma:format": "bunx --bun prisma format",
     "prisma:validate": "bunx --bun prisma validate",
     "prisma:migrate": "bunx --bun prisma migrate dev",
+    "prisma:deploy": "bunx --bun prisma migrate deploy",
     "prisma:generate": "bunx --bun prisma generate",
     "prisma:status": "bunx --bun prisma migrate status",
     "prisma:studio": "bunx --bun prisma studio",

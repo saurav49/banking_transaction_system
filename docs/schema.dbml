@@ -1,0 +1,112 @@
+// Import this DBML into dbdiagram.io to regenerate the ER diagram.
+Enum UserStatus { ACTIVE INACTIVE }
+Enum UserRole { ADMIN CUSTOMER }
+Enum AccountStatus { ACTIVE INACTIVE }
+Enum TransactionType { DEBIT CREDIT }
+Enum TransactionStatus { PENDING COMPLETED BLOCKED FINALIZED }
+Enum LedgerType { DEBIT CREDIT }
+Enum OutboxEventStatus { PENDING PROCESSING PUBLISHED }
+
+Table User {
+  id uuid [pk]
+  name varchar
+  email varchar [unique]
+  passwordHash varchar
+  role UserRole
+  status UserStatus
+  createdAt timestamptz
+  deletedAt timestamptz
+}
+
+Table Account {
+  id uuid [pk]
+  userId uuid [not null]
+  balance bigint
+  status AccountStatus
+  fraudFlaggedAt timestamptz
+  createdAt timestamptz
+  deletedAt timestamptz
+}
+
+Table RefreshSession {
+  id uuid [pk]
+  tokenHash varchar [unique]
+  userId uuid [not null]
+  expiresAt timestamptz
+  createdAt timestamptz
+  revokedAt timestamptz
+}
+
+Table Transaction {
+  id uuid [pk]
+  transactionId varchar [unique]
+  accountId uuid [not null]
+  type TransactionType
+  amount bigint
+  status TransactionStatus
+  authorizedAt timestamptz
+  createdAt timestamptz
+}
+
+Table LedgerEntry {
+  id uuid [pk]
+  transactionId varchar [unique, not null]
+  accountId uuid [not null]
+  type LedgerType
+  amount bigint
+  balanceAfter bigint
+  createdAt timestamptz
+}
+
+Table FraudSignal {
+  id uuid [pk]
+  accountId uuid [not null]
+  signalType varchar
+  signalValue varchar
+  transactionId varchar
+  observedAt timestamptz
+  createdAt timestamptz
+}
+
+Table AnalyticsMetric {
+  id uuid [pk]
+  bucketStart timestamptz [unique]
+  completedCount int
+  completedAmount bigint
+  finalizedCount int
+  finalizedAmount bigint
+  updatedAt timestamptz
+}
+
+Table OutboxEvent {
+  id uuid [pk]
+  topic varchar
+  partitionKey varchar
+  eventType varchar
+  eventVersion int
+  aggregateId varchar
+  transactionId varchar
+  payload jsonb
+  status OutboxEventStatus
+  attempts int
+  nextAttemptAt timestamptz
+  createdAt timestamptz
+  publishedAt timestamptz
+  lastError text
+}
+
+Table ProcessedEvent {
+  eventId varchar
+  consumerName varchar
+  processedAt timestamptz
+
+  indexes { (consumerName, eventId) [pk] }
+}
+
+Ref: Account.userId > User.id
+Ref: RefreshSession.userId > User.id
+Ref: Transaction.accountId > Account.id
+Ref: LedgerEntry.transactionId - Transaction.transactionId
+Ref: LedgerEntry.accountId > Account.id
+Ref: FraudSignal.accountId > Account.id
+Ref: FraudSignal.transactionId > Transaction.transactionId

@@ -35,6 +35,11 @@ const envSchema = z.object({
     .int()
     .positive()
     .default(1_000),
+  TRANSACTION_FINALIZATION_TIMEOUT_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(30),
 });
 
 const parsed = envSchema.safeParse(process.env);

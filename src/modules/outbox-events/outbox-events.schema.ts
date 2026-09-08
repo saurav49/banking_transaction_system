@@ -45,6 +45,8 @@ export const transactionCompletedPayloadSchema = z
     txnType: z.enum(['DEBIT', 'CREDIT']),
     amount: z.string().regex(/^[1-9]\d*$/),
     balanceAfter: z.string().regex(/^\d+$/),
+    ipAddress: z.string().nullable().optional(),
+    deviceFingerprint: z.string().trim().min(1).optional(),
   })
   .strict();
 
@@ -56,13 +58,61 @@ export const transactionEventSchema = z
     aggregateId: z.string().trim().min(1),
     transactionId: z.string().trim().min(1).max(100),
     occurredAt: z.iso.datetime(),
-    payload: z.json(),
+    // All banking events are object payloads. Rejecting scalar/array payloads
+    // here makes corrupted Kafka messages retryable and eventually DLQ-able.
+    payload: z.record(z.string(), z.json()),
   })
   .strict();
 
 export const transactionCompletedEventSchema = transactionEventSchema.extend({
   eventType: z.literal('TransactionCompleted'),
   payload: transactionCompletedPayloadSchema,
+});
+
+export const transactionBlockedEventSchema = transactionEventSchema.extend({
+  eventType: z.literal('TransactionBlocked'),
+  payload: z
+    .object({
+      type: z.literal('TransactionBlocked'),
+      transactionId: z.string().trim().min(1).max(100),
+      accountId: z.uuid(),
+      txnType: z.enum(['DEBIT', 'CREDIT']),
+      amount: z.string().regex(/^[1-9]\d*$/),
+      ipAddress: z.string().nullable().optional(),
+      deviceFingerprint: z.string().trim().min(1).optional(),
+      reason: z.string().trim().min(1),
+    })
+    .strict(),
+});
+
+export const ledgerUpdatedEventSchema = transactionEventSchema.extend({
+  eventType: z.literal('LedgerUpdated'),
+  payload: z
+    .object({
+      type: z.literal('LedgerUpdated'),
+      transactionId: z.string().trim().min(1).max(100),
+      accountId: z.uuid(),
+      txnType: z.enum(['DEBIT', 'CREDIT']),
+      amount: z.string().regex(/^[1-9]\d*$/),
+      balanceAfter: z.string().regex(/^\d+$/),
+    })
+    .strict(),
+});
+
+const finalizedPayloadSchema = z
+  .object({
+    type: z.literal('TransactionFinalized'),
+    transactionId: z.string().trim().min(1).max(100),
+    accountId: z.uuid(),
+    txnType: z.enum(['DEBIT', 'CREDIT']),
+    amount: z.string().regex(/^[1-9]\d*$/),
+    balanceAfter: z.string().regex(/^\d+$/),
+  })
+  .strict();
+
+export const transactionFinalizedEventSchema = transactionEventSchema.extend({
+  eventType: z.literal('TransactionFinalized'),
+  payload: finalizedPayloadSchema,
 });
 
 export type CreateOutboxEventInput = z.infer<typeof createOutboxEventSchema>;

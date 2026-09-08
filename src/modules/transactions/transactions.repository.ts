@@ -118,6 +118,13 @@ export class PrismaTransactionRepository implements TransactionRepository {
         };
       }
 
+      await tx.$queryRaw<Array<{ locked: number }>>`
+        SELECT 1::integer AS "locked"
+        FROM pg_advisory_xact_lock(
+          hashtextextended(${accountInfo.userId}::text, 0::bigint)
+        )
+      `;
+
       const existingTxn = await tx.transaction.findUnique({
         where: {
           transactionId: input.transactionId,
@@ -170,8 +177,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
         },
         where: {
           account: {
-            userId: auth.userId,
-            id: input.accountId,
+            userId: accountInfo.userId,
           },
           createdAt: {
             gte: new Date(Date.now() - 60_000),
@@ -184,8 +190,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
         },
         where: {
           account: {
-            id: input.accountId,
-            userId: auth.userId,
+            userId: accountInfo.userId,
           },
           type: TransactionType.DEBIT,
           createdAt: {
@@ -205,6 +210,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
           type: input.type,
           amount: input.amountMinor,
           status: TransactionStatus.COMPLETED,
+          authorizedAt: new Date(),
         },
         select: {
           id: true,
@@ -290,6 +296,8 @@ export class PrismaTransactionRepository implements TransactionRepository {
             txnType: resultTxn.type,
             amount: resultTxn.amount.toString(),
             balanceAfter: balanceAfter.toString(),
+            ipAddress,
+            deviceFingerprint,
           },
         },
       });
