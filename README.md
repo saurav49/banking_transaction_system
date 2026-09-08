@@ -133,6 +133,32 @@ If the account was funded through the transaction API, wait 61 seconds before
 starting the simulation so that funding transaction is outside the velocity
 window.
 
+### Observed simulation result
+
+The recorded run against account `3702cf67-2ec7-456b-909b-8bc802b1e1cb` returned
+four `201` responses and six `422` fraud blocks, with zero insufficient-balance
+responses. The account had been credited approximately 12 seconds earlier, so
+that credit counted as the first transaction in the five-transaction velocity
+window. Only four attack debits could therefore complete; the fifth attack
+request was the sixth transaction and was blocked. Subsequent blocked attempts
+also exceeded the cumulative debit threshold.
+
+The final balance was `6060000` minor units (₹60,600), confirming that only the
+four successful ₹10,000 debits changed the balance. The same run reported
+`asyncFraudFlagged: false` because the fraud consumer had not processed the
+published events yet. Start `bun run worker:fraud` and query
+`GET /api/v1/replay/accounts/3702cf67-2ec7-456b-909b-8bc802b1e1cb`; the worker
+will consume the existing completed/blocked events, persist the device/IP
+signals, and populate `fraudFlaggedAt`.
+
+The replay endpoint for this run returned five balance-affecting events (one
+funding credit and four successful debits) and rebuilt `6000000` minor units
+(₹60,000). The ₹600 difference from the live balance is the account balance
+that existed before this event history began; it was created outside the event
+stream. For an exact regulatory rebuild, production account creation must emit
+an opening-balance/genesis event, and all later balance changes must go through
+the transactional outbox.
+
 ## Tests
 
 ```bash
